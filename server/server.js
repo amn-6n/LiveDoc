@@ -8,7 +8,7 @@ await mongoose.connect('mongodb://127.0.0.1/live-doc')
 const httpServer = createServer()
 const io = new Server(httpServer, {
     cors: {
-        origin: 'http://localhost:5173',
+        origin: 'http://localhost:5177',
         methods: ['GET', 'POST']
     },
 })
