@@ -1,3 +1,9 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 .editor-container {
   display: flex;
   flex-direction: column;
@@ -163,4 +169,88 @@
 @keyframes fadeOut {
   from { opacity: 1; transform: translateY(0); }
   to { opacity: 0; transform: translateY(-20px); }
+}
+
+.homePageWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  height: 100vh;
+  background: url(../public/homeBg.jpg) no-repeat center center;
+  background-size: cover;
+  
+}
+
+.formWrapper {
+  /* background: #00B0C0; */
+  padding: 20px;
+  border-radius: 10px;
+  width: 400px;
+  max-width: 90%;
+  background-color: rgb(0 0 0 / 0.5);
+  color: #fff;
+}
+
+.title {
+  border-bottom: 2px solid #737070;
+}
+
+.sub-title {
+  margin-bottom: 10px;
+}
+
+footer {
+  background-color: rgb(0 0 0 / 0.5);
+  color: #fff;
+  padding: 10px;
+  border-radius: 50px;
+  position: fixed;
+  bottom: 0;
+  margin-bottom: 10px;
+}
+
+footer a {
+  color: #28a745;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  margin-top: 20px;
+}
+
+.inputBox {
+  padding: 10px;
+  border-radius: 5px;
+  outline: none;
+  border: none;
+  margin-bottom: 14px;
+  background: #eee;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.btnGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn {
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+}
+
+.joinBtn, .createNewBtn {
+  background: #4aed88;
+}
+
+.joinBtn:hover, .createNewBtn:hover {
+  background: #2b824c;
 }
