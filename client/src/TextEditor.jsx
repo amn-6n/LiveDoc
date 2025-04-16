@@ -380,6 +380,7 @@ export default function TextEditor() {
             accept=".txt,.md,.doc,.docx"
           />
         </div>
+        
       </div>
 
       {/* Notifications */}
