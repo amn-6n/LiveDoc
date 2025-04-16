@@ -1,4 +1,5 @@
 import TextEditor from "./TextEditor"
+import DocumentList from "./DocumentList"
 import {
   BrowserRouter as Router,
   Routes,
@@ -8,11 +9,10 @@ import {
 import { v4 as uuidV4} from 'uuid'
 
 function App() {
-
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Navigate to={`/documents/${uuidV4()}`} />} />
+        <Route path="/" element={<DocumentList />} />
         <Route path="/documents/:id" element={<TextEditor />} />
       </Routes>
     </Router>
