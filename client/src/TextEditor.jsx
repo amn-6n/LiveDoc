@@ -339,8 +339,13 @@ export default function TextEditor() {
   return (
     <>
       <div className="editor-container">
+
         <div className="editor-header">
+          <div className="documentTitle">
+
           <h2>{documentTitle || 'Untitled Document'}</h2>
+          </div>
+
           <div className="connected-users">
             <span>Connected Users ({connectedUsers.length}): </span>
             {connectedUsers.map((user, index) => (

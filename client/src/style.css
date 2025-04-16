@@ -240,11 +240,12 @@ body {
   cursor: pointer;
   font-size: 1rem;
   font-weight: bold;
-  transition: background-color 0.2s;
+  transition: all 0.1s ease-in-out
 }
 
 .upload-btn:hover {
   background-color: #1976D2;
+  transform: translateY(-2px);
 }
 
 .editor-container {
@@ -286,6 +287,11 @@ body {
   box-shadow: var(--boxShadow);
   position: relative;
   z-index: 11;
+}
+
+.share-btn:hover {
+  background-color: #0360ac;
+  transform: translateY(-2px);
 }
 
 .save-btn {
