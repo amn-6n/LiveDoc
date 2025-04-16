@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Quill from "quill"
 import "quill/dist/quill.snow.css"
 import { io } from 'socket.io-client'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Document, Packer, Paragraph, TextRun } from 'docx'
-import { Document as DocxDocument, Paragraph as DocxParagraph, TextRun as DocxTextRun } from 'docx'
-import * as mammoth from 'mammoth'
+import mammoth from 'mammoth'
+import './styles/TextEditor.css'
 
 const SAVE_INTERVAL_MS = 2000
+const SERVER_URL = 'http://localhost:3001'
 
 const TOOLBAR_OPTIONS = [
   [{ header: [1, 2, 3, 4, 5, 6, false]}],
@@ -28,58 +29,150 @@ const PERMISSIONS = {
 }
 
 export default function TextEditor() {
-  const {id: documentId} = useParams()
-  const [socket, setSocket] = useState()
-  const [quill, setQuill] = useState()
+  const { id: documentId } = useParams()
+  const [socket, setSocket] = useState(null)
+  const [quill, setQuill] = useState(null)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [documentTitle, setDocumentTitle] = useState('')
   const [isOwner, setIsOwner] = useState(false)
   const [permissions, setPermissions] = useState([])
   const [showShareModal, setShowShareModal] = useState(false)
   const [shareLink, setShareLink] = useState('')
+  const [connectedUsers, setConnectedUsers] = useState([])
+  const [notifications, setNotifications] = useState([])
   const navigate = useNavigate()
-
+  const fileInputRef = useRef(null)
+  const editorRef = useRef(null)
+  
+  const getUserInfo = () => {
+    const username = localStorage.getItem('username')
+    return {
+      email: `${username}@gg.com`,
+      username: username
+    }
+  }
+  
   useEffect(() => {
-    const s = io('http://localhost:3001')
+    const s = io(SERVER_URL)
     setSocket(s)
+    
+    const userInfo = getUserInfo()
+    s.emit('identify-user', userInfo)
 
     return () => {
       s.disconnect()
     }
   }, [])
 
-  useEffect(() => {
-    if (socket == null || quill == null) return
+  const wrapperRef = useCallback((wrapper) => {
+    if (!wrapper) return 
+
+    wrapper.innerHTML = ""
+    const editor = document.createElement('div')
+    wrapper.append(editor)
+    editorRef.current = editor
     
-    socket.once("load-document", ({ document, isOwner, permissions }) => {
+    const q = new Quill(editor, { 
+      theme: 'snow', 
+      modules: { toolbar: TOOLBAR_OPTIONS } 
+    })
+    
+    q.disable()
+    q.setText("Loading...")
+    setQuill(q)
+  }, [])
+
+  useEffect(() => {
+    if (!socket || !quill) return
+    
+    const handleLoadDocument = ({ document, isOwner, permissions, connectedUsers }) => {
       quill.setContents(document.data)
+      setDocumentTitle(document.title || '')
       setIsOwner(isOwner)
       setPermissions(permissions)
+      setConnectedUsers(connectedUsers || [])
+      
       if (permissions.includes(PERMISSIONS.EDIT)) {
         quill.enable()
-      } else {
-        quill.disable()
       }
-    })
+    }
 
+    socket.once("load-document", handleLoadDocument)
     socket.emit('get-document', documentId)
 
-    socket.on('receive-changes', (delta) => {
-      quill.updateContents(delta)
+    socket.on("user-joined", (user) => {
+
+      setNotifications(prev => [
+        { 
+          id: Date.now(), 
+          message: `${user.username} joined the document`, 
+          type: 'join' 
+        },
+        ...prev
+      ].slice(0, 5)) 
+    })
+    
+    socket.on("user-left", (user) => {
+      setNotifications(prev => [
+        { 
+          id: Date.now(), 
+          message: `${user.username} left the document`, 
+          type: 'leave' 
+        },
+        ...prev
+      ].slice(0, 5))
+    })
+    
+    socket.on("connected-users", (users) => {
+      setConnectedUsers(users)
     })
 
     return () => {
-      socket.off('receive-changes')
+      socket.off("load-document", handleLoadDocument)
+      socket.off("user-joined")
+      socket.off("user-left")
+      socket.off("connected-users")
+      
+      socket.emit('leave-document')
     }
   }, [socket, quill, documentId])
 
   useEffect(() => {
-    if (socket == null || quill == null) return
+    if (!socket || !quill) return
+
+    const handleReceiveChanges = (delta) => {
+      quill.updateContents(delta)
+    }
+
+    socket.on('receive-changes', handleReceiveChanges)
+
+    return () => {
+      socket.off('receive-changes', handleReceiveChanges)
+    }
+  }, [socket, quill])
+
+  // Handle sending changes to server
+  useEffect(() => {
+    if (!socket || !quill) return
+
+    const handleTextChange = (delta, oldDelta, source) => {
+      if (source !== 'user') return 
+      socket.emit("send-changes", delta)
+    }
+
+    quill.on('text-change', handleTextChange)
+
+    return () => {
+      quill.off('text-change', handleTextChange)
+    }
+  }, [socket, quill])
+
+  // Auto-save document periodically
+  useEffect(() => {
+    if (!socket || !quill || !permissions.includes(PERMISSIONS.EDIT)) return
 
     const interval = setInterval(() => {
-      if (permissions.includes(PERMISSIONS.EDIT)) {
-        socket.emit('save-document', quill.getContents())
-      }
+      socket.emit('save-document', quill.getContents())
     }, SAVE_INTERVAL_MS)
 
     return () => {
@@ -87,49 +180,24 @@ export default function TextEditor() {
     }
   }, [socket, quill, permissions])
 
-  useEffect(() => {
-    if (socket == null || quill == null) return
-
-    const handler = (delta, oldDelta, source) => {
-      if(source !== 'user') return 
-      socket.emit("send-changes", delta)
-    }
-
-    quill.on('text-change', handler)
-
-    return () => {
-      quill.off('text-change', handler)
-    }
-  },[socket, quill])
-
-  const handleSave = () => {
-    setShowSaveModal(true)
-  }
-
-  const handleSaveConfirm = async () => {
-    if (documentTitle.trim()) {
-      // Save to server
-      socket.emit('update-title', { docId: documentId, title: documentTitle })
-      socket.emit('save-document', quill.getContents())
-
-      // Save to system as DOCX
-      const content = quill.getContents()
-      
+  // Convert Quill content to DOCX
+  const convertToDocx = async (content, title) => {
+    try {
       // Create DOCX document
       const doc = new Document({
-        title: documentTitle,
+        title: title,
         description: "Document created with LiveDoc",
         sections: [{
           properties: {},
           children: content.ops.map(op => {
-            if (op.insert) {
+            if (typeof op.insert === 'string') {
               return new Paragraph({
                 children: [
                   new TextRun({
                     text: op.insert,
-                    bold: op.attributes?.bold,
-                    italic: op.attributes?.italic,
-                    underline: op.attributes?.underline
+                    bold: op.attributes?.bold || false,
+                    italic: op.attributes?.italic || false,
+                    underline: op.attributes?.underline || false
                   })
                 ]
               })
@@ -139,124 +207,186 @@ export default function TextEditor() {
         }]
       })
 
-      // Convert to blob and download
-      const blob = await Packer.toBlob(doc)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${documentTitle.replace(/\s+/g, '_')}.docx`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-
-      setShowSaveModal(false)
-      navigate('/')
+      return await Packer.toBlob(doc)
+    } catch (error) {
+      console.error('Error converting to DOCX:', error)
+      throw new Error('Failed to convert document to DOCX format')
     }
   }
 
-  const handleFileOpen = async (event) => {
+  // Download document as DOCX
+  const downloadDocx = async (blob, fileName) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${fileName.replace(/\s+/g, '_')}.docx`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  // Save and exit handler
+  const handleSave = () => {
+    setShowSaveModal(true)
+  }
+
+  // Handle save confirmation
+  const handleSaveConfirm = async () => {
+    if (!documentTitle.trim()) {
+      alert('Please enter a document title')
+      return
+    }
+    
+    try {
+      // Save to server
+      socket.emit('update-title', { docId: documentId, title: documentTitle })
+      socket.emit('save-document', quill.getContents())
+
+      // Convert and download as DOCX
+      const content = quill.getContents()
+      const blob = await convertToDocx(content, documentTitle)
+      await downloadDocx(blob, documentTitle)
+
+      setShowSaveModal(false)
+      
+    } catch (error) {
+      console.error('Error saving document:', error)
+      alert('Error saving document. Please try again.')
+    }
+  }
+
+  // Handle file upload for both text and DOCX files
+  const handleFileUpload = async (event) => {
     const file = event.target.files[0]
     if (!file) return
 
     try {
-      const arrayBuffer = await file.arrayBuffer()
-      const doc = await DocxDocument.load(arrayBuffer)
-      
-      // Convert document content to Quill delta format
-      const content = {
-        ops: []
-      }
-
-      // Process each paragraph
-      for (const paragraph of doc.paragraphs) {
-        // Skip empty paragraphs
-        if (!paragraph.text.trim()) {
-          content.ops.push({ insert: '\n' })
-          continue
-        }
-
-        // Process each run (text with consistent formatting)
-        for (const run of paragraph.runs) {
-          if (!run.text.trim()) continue
-
-          const attributes = {}
+      if (file.name.endsWith('.docx')) {
+        // Handle DOCX files
+        const arrayBuffer = await file.arrayBuffer()
+        const result = await mammoth.extractRawText({ arrayBuffer })
+        const textContent = result.value
+        
+        // Update Quill editor with DOCX content
+        if (quill) {
+          quill.setText(textContent)
           
-          // Check for formatting
-          if (run.bold) attributes.bold = true
-          if (run.italic) attributes.italic = true
-          if (run.underline) attributes.underline = true
-
-          // Add the text with its formatting
-          content.ops.push({
-            insert: run.text,
-            attributes: Object.keys(attributes).length > 0 ? attributes : undefined
+          // Save to server
+          socket.emit('update-document', {
+            id: documentId,
+            data: quill.getContents()
           })
         }
-
-        // Add a newline after each paragraph
-        content.ops.push({ insert: '\n' })
-      }
-
-      // Clean up the content
-      content.ops = content.ops.filter(op => {
-        if (op.insert) {
-          // Remove empty text operations
-          if (op.insert.trim() === '' && op.insert !== '\n') {
-            return false
-          }
-          // Clean up whitespace
-          op.insert = op.insert.replace(/\s+/g, ' ')
+      } else {
+        // Handle text files
+        const text = await file.text()
+        
+        // Update Quill editor with text content
+        if (quill) {
+          quill.setText(text)
+          
+          // Save to server
+          socket.emit('update-document', {
+            id: documentId,
+            data: quill.getContents()
+          })
         }
-        return true
-      })
-
-      // Update the editor content
-      if (quill) {
-        quill.setContents(content)
       }
-
-      // Update the document title
-      setDocumentTitle(file.name.replace('.docx', ''))
-
+      
+      // Update document title from filename
+      const filename = file.name.split('.').slice(0, -1).join('.')
+      setDocumentTitle(filename)
+      socket.emit('update-title', { docId: documentId, title: filename })
+      
     } catch (error) {
-      console.error('Error opening document:', error)
-      alert('Error opening document. Please make sure it is a valid DOCX file.')
+      console.error('Error processing file:', error)
+      alert('Error processing file. Please try again.')
     }
+    
+    // Clear the file input to allow selecting the same file again
+    event.target.value = null
   }
 
-  const wrapperRef = useCallback((wrapper) => {
-    if (wrapper == null) return 
-
-    wrapper.innerHTML = ""
-    const editor = document.createElement('div')
-    wrapper.append(editor)
-    const q = new Quill(editor,  { theme : 'snow', modules: { toolbar:TOOLBAR_OPTIONS} })
-    q.disable()
-    q.setText("Loading...")
-    setQuill(q)
-  }, [])
-
+  // Generate and handle sharing
   const generateShareLink = () => {
-    const baseUrl = window.location.origin
-    const link = `${baseUrl}/join/${documentId}`
+  
+    const link = `${documentId}`
     setShareLink(link)
     setShowShareModal(true)
   }
 
   const copyShareLink = () => {
     navigator.clipboard.writeText(shareLink)
-    alert('Share link copied to clipboard!')
+      .then(() => alert('Share link copied to clipboard!'))
+      .catch(err => {
+        console.error('Failed to copy:', err)
+        alert('Failed to copy link. Please try again.')
+      })
   }
+
+  // Remove notification after a delay
+  useEffect(() => {
+    if (notifications.length === 0) return
+    
+    const timer = setTimeout(() => {
+      setNotifications(prev => prev.slice(0, -1))
+    }, 5000) // Remove oldest notification after 5 seconds
+    
+    return () => clearTimeout(timer)
+  }, [notifications])
 
   return (
     <>
       <div className="editor-container">
+        <div className="editor-header">
+          <h2>{documentTitle || 'Untitled Document'}</h2>
+          <div className="connected-users">
+            <span>Connected Users ({connectedUsers.length}): </span>
+            {connectedUsers.map((user, index) => (
+              <span key={user.email} className="user-badge">
+                {user.username}
+                {index < connectedUsers.length - 1 ? ', ' : ''}
+              </span>
+            ))}
+          </div>
+        </div>
+        
         <div className="container" ref={wrapperRef}></div>
+        
         <div className="editor-buttons">
           <button className="share-btn" onClick={generateShareLink}>Share Document</button>
-          <button className="save-btn" onClick={handleSave}>Save & Exit</button>
+          <button className="save-btn" onClick={handleSave}>Save</button>
+          <button className='exit-btn' onClick={() => {
+            socket.emit('leave-document')
+            navigate('/')
+          }}>Quit</button>
+          <button 
+            className="upload-btn" 
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Open File
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            style={{ display: 'none' }}
+            accept=".txt,.md,.doc,.docx"
+          />
         </div>
+      </div>
+
+      {/* Notifications */}
+      <div className="notifications-container">
+        {notifications.map(notification => (
+          <div 
+            key={notification.id} 
+            className={`notification ${notification.type === 'join' ? 'join' : 'leave'}`}
+          >
+            {notification.message}
+          </div>
+        ))}
       </div>
 
       {showSaveModal && (
@@ -300,4 +430,3 @@ export default function TextEditor() {
     </>
   )
 }
-

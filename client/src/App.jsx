@@ -4,17 +4,15 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
-  Navigate
 } from 'react-router-dom'
-import { v4 as uuidV4} from 'uuid'
+import RoomForm from "./RoomForm"
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<DocumentList />} />
+        <Route path="/" element={<RoomForm />} />
         <Route path="/documents/:id" element={<TextEditor />} />
-        <Route path="/join/:id" element={<TextEditor />} />
       </Routes>
     </Router>
   )

@@ -15,22 +15,27 @@ const io = new Server(httpServer, {
 
 const defaultValue = ""
 
-// Store user sessions
-const userSessions = new Map()
+// Store user sessions with email and username
+const userSessions = new Map() // socketId -> { email, username }
+
+// Track users in each document room
+const documentRooms = new Map() // documentId -> Set of { socketId, email, username }
 
 io.on("connection", socket => {
     // Handle user identification
-    socket.on('identify-user', (email) => {
-        userSessions.set(socket.id, email)
+    socket.on('identify-user', ({ email, username }) => {
+        userSessions.set(socket.id, { email, username })
     })
 
     // Handle document listing
     socket.on('get-documents', async () => {
-        const userEmail = userSessions.get(socket.id)
+        const userInfo = userSessions.get(socket.id)
+        if (!userInfo) return
+        
         const documents = await Document.find({
             $or: [
-                { owner: userEmail },
-                { 'collaborators.email': userEmail }
+                { owner: userInfo.email },
+                { 'collaborators.email': userInfo.email }
             ]
         }).sort({ createdAt: -1 })
         socket.emit('document-list', documents)
@@ -38,61 +43,59 @@ io.on("connection", socket => {
 
     // Handle document creation from file
     socket.on('create-document', async ({ id, title, data }) => {
-        const userEmail = userSessions.get(socket.id)
+        const userInfo = userSessions.get(socket.id)
+        if (!userInfo) return
+        
         await Document.create({
             _id: id,
-            title: title,
-            data: data,
+            title: title || 'Untitled Document',
+            data: data || defaultValue,
             createdAt: new Date(),
-            owner: userEmail,
+            owner: userInfo.email,
             collaborators: []
         })
-        const documents = await Document.find({
-            $or: [
-                { owner: userEmail },
-                { 'collaborators.email': userEmail }
-            ]
-        }).sort({ createdAt: -1 })
-        io.emit('document-list', documents)
-    })
+        
+        updateAndBroadcastDocuments(userInfo.email)
+    });
+
+    socket.on('update-document', async ({ id, data }) => {
+        await Document.updateOne({ _id: id }, {
+            $set: { data: data }
+        });
+    });
 
     // Handle document deletion
     socket.on('delete-document', async (docId) => {
-        const userEmail = userSessions.get(socket.id)
+        const userInfo = userSessions.get(socket.id)
+        if (!userInfo) return
+        
         const document = await Document.findById(docId)
-        if (document && document.owner === userEmail) {
+        if (document && document.owner === userInfo.email) {
             await Document.findByIdAndDelete(docId)
-            const documents = await Document.find({
-                $or: [
-                    { owner: userEmail },
-                    { 'collaborators.email': userEmail }
-                ]
-            }).sort({ createdAt: -1 })
-            io.emit('document-list', documents)
+            updateAndBroadcastDocuments(userInfo.email)
         }
     })
 
     // Handle title updates
     socket.on('update-title', async ({ docId, title }) => {
-        const userEmail = userSessions.get(socket.id)
+        const userInfo = userSessions.get(socket.id)
+        if (!userInfo) return
+        
         const document = await Document.findById(docId)
-        if (document && document.owner === userEmail) {
+        if (document && (document.owner === userInfo.email || 
+                         document.collaborators.some(c => c.email === userInfo.email && c.permission === 'edit'))) {
             await Document.findByIdAndUpdate(docId, { title })
-            const documents = await Document.find({
-                $or: [
-                    { owner: userEmail },
-                    { 'collaborators.email': userEmail }
-                ]
-            }).sort({ createdAt: -1 })
-            io.emit('document-list', documents)
+            updateAndBroadcastDocuments(userInfo.email)
         }
     })
 
     // Handle adding collaborators
     socket.on('add-collaborator', async ({ docId, email, permission }) => {
-        const userEmail = userSessions.get(socket.id)
+        const userInfo = userSessions.get(socket.id)
+        if (!userInfo) return
+        
         const document = await Document.findById(docId)
-        if (document && document.owner === userEmail) {
+        if (document && document.owner === userInfo.email) {
             const collaborator = document.collaborators.find(c => c.email === email)
             if (collaborator) {
                 collaborator.permission = permission
@@ -100,47 +103,68 @@ io.on("connection", socket => {
                 document.collaborators.push({ email, permission })
             }
             await document.save()
-            const documents = await Document.find({
-                $or: [
-                    { owner: userEmail },
-                    { 'collaborators.email': userEmail }
-                ]
-            }).sort({ createdAt: -1 })
-            io.emit('document-list', documents)
+            updateAndBroadcastDocuments(userInfo.email)
         }
     })
 
     // Handle removing collaborators
     socket.on('remove-collaborator', async ({ docId, email }) => {
-        const userEmail = userSessions.get(socket.id)
+        const userInfo = userSessions.get(socket.id)
+        if (!userInfo) return
+        
         const document = await Document.findById(docId)
-        if (document && document.owner === userEmail) {
+        if (document && document.owner === userInfo.email) {
             document.collaborators = document.collaborators.filter(c => c.email !== email)
             await document.save()
-            const documents = await Document.find({
-                $or: [
-                    { owner: userEmail },
-                    { 'collaborators.email': userEmail }
-                ]
-            }).sort({ createdAt: -1 })
-            io.emit('document-list', documents)
+            updateAndBroadcastDocuments(userInfo.email)
         }
     })
 
     socket.on('get-document', async documentId => {
-        const userEmail = userSessions.get(socket.id)
-        const document = await findOrCreateDocument(documentId, userEmail)
+        const userInfo = userSessions.get(socket.id)
+        if (!userInfo) return
+        
+        const document = await findOrCreateDocument(documentId, userInfo.email)
+        
+        // Join the socket room for this document
         socket.join(documentId)
         
-        const isOwner = document.owner === userEmail
-        const collaborator = document.collaborators.find(c => c.email === userEmail)
-        const permissions = isOwner ? ['edit'] : (collaborator ? [collaborator.permission] : ['read'])
+        // Add user to document room
+        if (!documentRooms.has(documentId)) {
+            documentRooms.set(documentId, new Set())
+        }
+        
+        const roomUsers = documentRooms.get(documentId)
+        roomUsers.add({
+            socketId: socket.id,
+            email: userInfo.email,
+            username: userInfo.username
+        })
+        
+        // Notify others that user joined
+        socket.to(documentId).emit("user-joined", {
+            username: userInfo.username,
+            email: userInfo.email
+        })
+        
+        // Send updated user list to everyone in the room
+        const connectedUsers = Array.from(roomUsers).map(user => ({
+            username: user.username,
+            email: user.email
+        }))
+        
+        io.to(documentId).emit("connected-users", connectedUsers)
+        
+        const isOwner = document.owner === userInfo.email
+        const collaborator = document.collaborators.find(c => c.email === userInfo.email)
+        const permissions = isOwner ? ['edit'] : (collaborator ? [collaborator.permission] : ['edit'])
         
         socket.emit("load-document", {
             document,
             isOwner,
             permissions,
-            collaborators: document.collaborators
+            collaborators: document.collaborators,
+            connectedUsers
         })
 
         socket.on('send-changes', delta => {
@@ -152,15 +176,47 @@ io.on("connection", socket => {
         socket.on("save-document", async data => {
             if (permissions.includes('edit')) {
                 await Document.findByIdAndUpdate(documentId, { data })
-                const documents = await Document.find({
-                    $or: [
-                        { owner: userEmail },
-                        { 'collaborators.email': userEmail }
-                    ]
-                }).sort({ createdAt: -1 })
-                io.emit('document-list', documents)
+                updateAndBroadcastDocuments(userInfo.email)
             }
         })
+        
+        // Handle leaving the document
+        const handleLeaveDocument = async () => {
+            if (documentRooms.has(documentId)) {
+                const roomUsers = documentRooms.get(documentId)
+                
+                // Find and remove the user
+                const userToRemove = Array.from(roomUsers).find(user => user.socketId === socket.id)
+                
+                if (userToRemove) {
+                    roomUsers.delete(userToRemove)
+                    
+                    // If room is empty, clean up
+                    if (roomUsers.size === 0) {
+                        documentRooms.delete(documentId)
+                    } else {
+                        // Notify others that user left
+                        socket.to(documentId).emit("user-left", {
+                            username: userToRemove.username,
+                            email: userToRemove.email
+                        })
+                        
+                        // Send updated user list
+                        const updatedUsers = Array.from(roomUsers).map(user => ({
+                            username: user.username,
+                            email: user.email
+                        }))
+                        
+                        io.to(documentId).emit("connected-users", updatedUsers)
+                    }
+                }
+            }
+        }
+        
+        socket.on('leave-document', handleLeaveDocument)
+        
+        // Also handle disconnection while in document
+        socket.on('disconnect', handleLeaveDocument)
     })
 
     // Clean up on disconnect
@@ -168,6 +224,26 @@ io.on("connection", socket => {
         userSessions.delete(socket.id)
     })
 })
+
+// Helper function to update and broadcast document list
+async function updateAndBroadcastDocuments(userEmail) {
+    const documents = await Document.find({
+        $or: [
+            { owner: userEmail },
+            { 'collaborators.email': userEmail }
+        ]
+    }).sort({ createdAt: -1 })
+    
+    // Find all socket ids for this user
+    const userSocketIds = Array.from(userSessions.entries())
+        .filter(([_, info]) => info.email === userEmail)
+        .map(([socketId, _]) => socketId)
+    
+    // Send updated documents to all connected clients for this user
+    userSocketIds.forEach(socketId => {
+        io.to(socketId).emit('document-list', documents)
+    })
+}
 
 async function findOrCreateDocument(id, ownerEmail) {
     if (id == null) return

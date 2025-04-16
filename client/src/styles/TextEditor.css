@@ -99,3 +99,68 @@
 .cancel-btn:hover {
   background-color: #5a6268;
 } 
+
+
+/* User presence styles */
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+}
+
+.editor-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.connected-users {
+  font-size: 14px;
+  color: #555;
+}
+
+.user-badge {
+  display: inline-block;
+  font-weight: 500;
+}
+
+/* Notifications */
+.notifications-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1000;
+}
+
+.notification {
+  padding: 12px 15px;
+  border-radius: 6px;
+  color: white;
+  animation: fadeIn 0.3s ease-in, fadeOut 0.5s ease-out 4.5s forwards;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.notification.join {
+  background-color: #4caf50;
+}
+
+.notification.leave {
+  background-color: #f44336;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-20px); }
+}
