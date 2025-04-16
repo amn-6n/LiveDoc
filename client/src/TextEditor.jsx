@@ -35,6 +35,8 @@ export default function TextEditor() {
   const [documentTitle, setDocumentTitle] = useState('')
   const [isOwner, setIsOwner] = useState(false)
   const [permissions, setPermissions] = useState([])
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareLink, setShareLink] = useState('')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -61,6 +63,14 @@ export default function TextEditor() {
     })
 
     socket.emit('get-document', documentId)
+
+    socket.on('receive-changes', (delta) => {
+      quill.updateContents(delta)
+    })
+
+    return () => {
+      socket.off('receive-changes')
+    }
   }, [socket, quill, documentId])
 
   useEffect(() => {
@@ -89,20 +99,6 @@ export default function TextEditor() {
 
     return () => {
       quill.off('text-change', handler)
-    }
-  },[socket, quill])
-
-  useEffect(() => {
-    if (socket == null || quill == null) return
-
-    const handler = (delta) => {
-      quill.updateContents(delta)
-    }
-
-    socket.on('receive-changes', handler)
-
-    return () => {
-      socket.off('receive-changes', handler)
     }
   },[socket, quill])
 
@@ -241,11 +237,24 @@ export default function TextEditor() {
     setQuill(q)
   }, [])
 
+  const generateShareLink = () => {
+    const baseUrl = window.location.origin
+    const link = `${baseUrl}/join/${documentId}`
+    setShareLink(link)
+    setShowShareModal(true)
+  }
+
+  const copyShareLink = () => {
+    navigator.clipboard.writeText(shareLink)
+    alert('Share link copied to clipboard!')
+  }
+
   return (
     <>
       <div className="editor-container">
         <div className="container" ref={wrapperRef}></div>
         <div className="editor-buttons">
+          <button className="share-btn" onClick={generateShareLink}>Share Document</button>
           <button className="save-btn" onClick={handleSave}>Save & Exit</button>
         </div>
       </div>
@@ -264,6 +273,26 @@ export default function TextEditor() {
             <div className="modal-buttons">
               <button onClick={handleSaveConfirm} className="confirm-btn">Save</button>
               <button onClick={() => setShowSaveModal(false)} className="cancel-btn">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showShareModal && (
+        <div className="modal-overlay">
+          <div className="share-modal">
+            <h2>Share Document</h2>
+            <div className="share-link-container">
+              <input
+                type="text"
+                value={shareLink}
+                readOnly
+                className="share-link"
+              />
+              <button onClick={copyShareLink} className="copy-btn">Copy Link</button>
+            </div>
+            <div className="modal-buttons">
+              <button onClick={() => setShowShareModal(false)} className="close-btn">Close</button>
             </div>
           </div>
         </div>

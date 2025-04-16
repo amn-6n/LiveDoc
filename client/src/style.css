@@ -264,10 +264,31 @@ body {
   box-shadow: var(--boxShadow);
 }
 
-.save-btn {
+.editor-buttons {
   position: fixed;
   bottom: 20px;
   right: 20px;
+  display: flex;
+  gap: 1rem;
+  z-index: 10;
+}
+
+.share-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: bold;
+  transition: all 0.2s;
+  box-shadow: var(--boxShadow);
+  position: relative;
+  z-index: 11;
+}
+
+.save-btn {
   padding: 0.75rem 1.5rem;
   background-color: #4CAF50;
   color: white;
@@ -276,8 +297,9 @@ body {
   cursor: pointer;
   font-size: 1rem;
   font-weight: bold;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
   box-shadow: var(--boxShadow);
+  position: relative;
   z-index: 10;
 }
 
@@ -359,33 +381,6 @@ body {
   background-color: #d32f2f;
 }
 
-.editor-buttons {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  display: flex;
-  gap: 1rem;
-  z-index: 10;
-}
-
-.share-btn {
-  padding: 0.75rem 1.5rem;
-  background-color: #2196F3;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: bold;
-  transition: all 0.2s;
-  box-shadow: var(--boxShadow);
-}
-
-.share-btn:hover {
-  background-color: #1976D2;
-  transform: translateY(-2px);
-}
-
 .share-modal {
   background-color: white;
   padding: 2rem;
@@ -421,13 +416,19 @@ body {
 }
 
 .copy-btn {
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1.5rem;
   background-color: #4CAF50;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 1rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.copy-btn:hover {
+  background-color: #45a049;
 }
 
 .add-collaborator {
@@ -509,4 +510,23 @@ body {
   cursor: pointer;
   font-size: 1rem;
   font-weight: bold;
+}
+
+.close-btn:hover {
+  background-color: #1976D2;
+}
+
+.share-link-container {
+  display: flex;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.share-link {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: #f5f5f5;
 }

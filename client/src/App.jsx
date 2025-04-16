@@ -14,6 +14,7 @@ function App() {
       <Routes>
         <Route path="/" element={<DocumentList />} />
         <Route path="/documents/:id" element={<TextEditor />} />
+        <Route path="/join/:id" element={<TextEditor />} />
       </Routes>
     </Router>
   )
