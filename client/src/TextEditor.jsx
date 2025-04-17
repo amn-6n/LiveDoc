@@ -23,11 +23,6 @@ const TOOLBAR_OPTIONS = [
   ["clean"],
 ]
 
-const PERMISSIONS = {
-  READ: 'read',
-  COMMENT: 'comment',
-  EDIT: 'edit'
-}
 
 export default function TextEditor() {
   const { id: documentId } = useParams()
