@@ -43,6 +43,7 @@ export default function TextEditor() {
   const navigate = useNavigate()
   const fileInputRef = useRef(null)
   const editorRef = useRef(null)
+  const [showDropdown, setShowDropdown] = useState(false)
   
   const getUserInfo = () => {
     const username = localStorage.getItem('username')
@@ -360,18 +361,30 @@ export default function TextEditor() {
         <div className="container" ref={wrapperRef}></div>
         
         <div className="editor-buttons">
-          <button className="share-btn" onClick={generateShareLink}>Share Document</button>
-          <button className="save-btn" onClick={handleSave}>Save</button>
-          <button className='exit-btn' onClick={() => {
-            socket.emit('leave-document')
-            navigate('/')
-          }}>Quit</button>
-          <button 
-            className="upload-btn" 
-            onClick={() => fileInputRef.current?.click()}
-          >
-            Open File
-          </button>
+          <div className="dropdown-container">
+            <button 
+              className="menu-btn" 
+              onClick={() => setShowDropdown(!showDropdown)}
+            >
+              Menu
+            </button>
+            {showDropdown && (
+              <div className="dropdown-menu">
+                <button className="dropdown-item" onClick={generateShareLink}>Share Document</button>
+                <button className="dropdown-item" onClick={handleSave}>Save</button>
+                <button className="dropdown-item" onClick={() => {
+                  socket.emit('leave-document')
+                  navigate('/')
+                }}>Quit</button>
+                <button 
+                  className="dropdown-item" 
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Open File
+                </button>
+              </div>
+            )}
+          </div>
           <input
             type="file"
             ref={fileInputRef}
