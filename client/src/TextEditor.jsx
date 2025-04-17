@@ -378,14 +378,14 @@ export default function TextEditor() {
             </button>
             {showDropdown && (
               <div className="dropdown-menu">
-                <button className="dropdown-item" onClick={generateShareLink}>Share Document</button>
-                <button className="dropdown-item" onClick={handleSave}>Save</button>
-                <button className="dropdown-item" onClick={() => {
+                <button className="dropdown-item share-btn" onClick={generateShareLink}>Share Document</button>
+                <button className="dropdown-item save-btn" onClick={handleSave}>Save</button>
+                <button className="dropdown-item quit-btn" onClick={() => {
                   socket.emit('leave-document')
                   navigate('/')
                 }}>Quit</button>
                 <button 
-                  className="dropdown-item" 
+                  className="dropdown-item open-file-btn" 
                   onClick={() => fileInputRef.current?.click()}
                 >
                   Open File
