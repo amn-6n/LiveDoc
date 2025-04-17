@@ -262,6 +262,7 @@ body {
   display: flex;
   justify-content: flex-end;
   box-shadow: var(--boxShadow);
+  align-items: center;
 }
 
 .editor-buttons {
@@ -271,7 +272,6 @@ body {
   display: flex;
   gap: 1rem;
   z-index: 10;
-  border: 2px solid red;
 }
 
 .share-btn {

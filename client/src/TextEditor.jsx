@@ -44,6 +44,7 @@ export default function TextEditor() {
   const fileInputRef = useRef(null)
   const editorRef = useRef(null)
   const [showDropdown, setShowDropdown] = useState(false)
+  const [showUsersDropdown, setShowUsersDropdown] = useState(false)
   
   const getUserInfo = () => {
     const username = localStorage.getItem('username')
@@ -343,18 +344,25 @@ export default function TextEditor() {
 
         <div className="editor-header">
           <div className="documentTitle">
-
-          <h2>{documentTitle || 'Untitled Document'}</h2>
+            <h2>{documentTitle || 'Untitled Document'}</h2>
           </div>
 
-          <div className="connected-users">
-            <span>Connected Users ({connectedUsers.length}): </span>
-            {connectedUsers.map((user, index) => (
-              <span key={user.email} className="user-badge">
-                {user.username}
-                {index < connectedUsers.length - 1 ? ', ' : ''}
-              </span>
-            ))}
+          <div className="connected-users-container">
+            <button 
+              className="users-btn"
+              onClick={() => setShowUsersDropdown(!showUsersDropdown)}
+            >
+              Users ({connectedUsers.length})
+            </button>
+            {showUsersDropdown && (
+              <div className="users-dropdown">
+                {connectedUsers.map((user) => (
+                  <div key={user.email} className="user-item">
+                    {user.username}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         
@@ -366,7 +374,7 @@ export default function TextEditor() {
               className="menu-btn" 
               onClick={() => setShowDropdown(!showDropdown)}
             >
-              Menu
+              Tools
             </button>
             {showDropdown && (
               <div className="dropdown-menu">
