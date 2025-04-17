@@ -6,6 +6,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Document, Packer, Paragraph, TextRun } from 'docx'
 import mammoth from 'mammoth'
 import './styles/TextEditor.css'
+import toast from 'react-hot-toast'
 
 const SAVE_INTERVAL_MS = 2000
 const SERVER_URL = 'http://localhost:3001'
@@ -318,12 +319,13 @@ export default function TextEditor() {
     setShowShareModal(true)
   }
 
+  // alert('Share link copied to clipboard!')
   const copyShareLink = () => {
     navigator.clipboard.writeText(shareLink)
-      .then(() => alert('Share link copied to clipboard!'))
+      .then(() => toast.success('Share link copied to clipboard!'))
       .catch(err => {
         console.error('Failed to copy:', err)
-        alert('Failed to copy link. Please try again.')
+        toast.error('Failed to copy link. Please try again.')
       })
   }
 
