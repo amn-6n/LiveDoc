@@ -258,7 +258,7 @@ body {
   top: 0;
   z-index: 2;
   background-color: var(--textEditorBgColor);
-  padding: 1rem;
+  padding: 8px 15px;
   display: flex;
   justify-content: flex-end;
   box-shadow: var(--boxShadow);
