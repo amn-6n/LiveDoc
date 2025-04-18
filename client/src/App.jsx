@@ -5,7 +5,10 @@ import {
   Route,
 } from 'react-router-dom'
 import RoomForm from "./RoomForm"
-import { Toaster } from 'react-hot-toast';
+import Register from './Auth/Register'
+import Login from './Auth/Login'
+import { Toaster } from 'react-hot-toast'
+import PrivateRoute from './PrivateRoute'
 
 function App() {
   return (
@@ -25,8 +28,27 @@ function App() {
 
       <Router>
         <Routes>
-          <Route path="/" element={<RoomForm />} />
-          <Route path="/documents/:id" element={<TextEditor />} />
+          {/* Public Routes */}
+          <Route path="/register" element={<Register />} />
+          <Route path="/" element={<Login />} />
+
+          {/* Protected Routes */}
+          <Route
+            path="/join"
+            element={
+              <PrivateRoute>
+                <RoomForm />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/documents/:id"
+            element={
+              <PrivateRoute>
+                <TextEditor />
+              </PrivateRoute>
+            }
+          />
         </Routes>
       </Router>
     </>

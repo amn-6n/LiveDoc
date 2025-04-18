@@ -1,11 +1,25 @@
+import express from 'express'
 import mongoose from 'mongoose'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import Document from './Document.js'
+import userRouter from './route.js'
+import cors from 'cors'
+
+const app = express()
+const httpServer = createServer(app) 
 
 await mongoose.connect('mongodb://127.0.0.1/live-doc')
 
-const httpServer = createServer()
+app.use(express.json())
+app.use(cors())
+app.use('/api/v1/users', userRouter) 
+
+app.get('/', (req, res) => {
+    res.send('Live Document Collaboration Server is running.')
+})
+
+
 const io = new Server(httpServer, {
     cors: {
         origin: 'http://localhost:5173',
@@ -62,6 +76,7 @@ io.on("connection", socket => {
         await Document.updateOne({ _id: id }, {
             $set: { data: data }
         });
+        socket.broadcast.to(id).emit("receive-changes", data)
     });
 
     // Handle document deletion
@@ -87,6 +102,8 @@ io.on("connection", socket => {
             await Document.findByIdAndUpdate(docId, { title })
             updateAndBroadcastDocuments(userInfo.email)
         }
+
+        socket.broadcast.to(docId).emit("receive-title-changes", title)
     })
 
     // Handle adding collaborators
@@ -210,6 +227,11 @@ io.on("connection", socket => {
                         io.to(documentId).emit("connected-users", updatedUsers)
                     }
                 }
+
+                if(roomUsers.size === 0) {
+                    documentRooms.delete(documentId);
+                    await Document.findByIdAndDelete(documentId);
+                }
             }
         }
         
@@ -220,8 +242,38 @@ io.on("connection", socket => {
     })
 
     // Clean up on disconnect
-    socket.on('disconnect', () => {
-        userSessions.delete(socket.id)
+    socket.on('disconnect',async () => {
+        userSessions.delete(socket.id);
+        // console.log(`User disconnected: ${socket.id}`)
+        // check the document rooms and if the document room is empty, delete the document
+        for (const [docId, users] of documentRooms.entries()) {
+            const userToRemove = Array.from(users).find(user => user.socketId === socket.id)
+            if (userToRemove) {
+                users.delete(userToRemove)
+                if (users.size === 0) {
+                    documentRooms.delete(docId)
+                    await Document.findByIdAndDelete(docId);
+                }
+
+                socket.to(docId).emit("user-left", {
+                    username: userToRemove.username,
+                    email: userToRemove.email
+                })
+                
+                // Send updated user list
+                const updatedUsers = Array.from(users).map(user => ({
+                    username: user.username,
+                    email: user.email
+                }))
+                
+                io.to(docId).emit("connected-users", updatedUsers)
+            }
+
+        }
+        // Notify others that user left
+       
+
+
     })
 })
 

@@ -42,15 +42,21 @@ export default function TextEditor() {
   const [showDropdown, setShowDropdown] = useState(false)
   const [showUsersDropdown, setShowUsersDropdown] = useState(false)
   
+  const token = localStorage.getItem('token')
+
+
+
   const getUserInfo = () => {
-    const username = localStorage.getItem('username')
+    const username = localStorage.getItem('username');
+    const email = localStorage.getItem('email');
     return {
-      email: `${username}@gg.com`,
+      email: `${email}`,
       username: username
     }
   }
   
   useEffect(() => {
+
     const s = io(SERVER_URL)
     setSocket(s)
     
@@ -90,9 +96,9 @@ export default function TextEditor() {
       setPermissions(permissions)
       setConnectedUsers(connectedUsers || [])
       
-      if (permissions.includes(PERMISSIONS.EDIT)) {
+     
         quill.enable()
-      }
+      
     }
 
     socket.once("load-document", handleLoadDocument)
@@ -143,9 +149,13 @@ export default function TextEditor() {
     }
 
     socket.on('receive-changes', handleReceiveChanges)
+    socket.on('receive-title-changes', (title) => {
+      setDocumentTitle(title)
+    });
 
     return () => {
-      socket.off('receive-changes', handleReceiveChanges)
+      socket.off('receive-changes', handleReceiveChanges);
+      socket.off('receive-title-changes')
     }
   }, [socket, quill])
 
@@ -167,7 +177,7 @@ export default function TextEditor() {
 
   // Auto-save document periodically
   useEffect(() => {
-    if (!socket || !quill || !permissions.includes(PERMISSIONS.EDIT)) return
+    if (!socket || !quill) return
 
     const interval = setInterval(() => {
       socket.emit('save-document', quill.getContents())
