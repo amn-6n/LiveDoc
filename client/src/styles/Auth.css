@@ -94,20 +94,20 @@
 
 .auth-link {
   text-align: center;
-  margin-top: 20px;
-  color: #fff;
+  margin-top: 5px;
+  /* color: #fff; */
   font-size: 14px;
 }
 
 .auth-link a {
-  color: #4aed88;
+  color: #c5cbcd;
   text-decoration: none;
   font-weight: 600;
   transition: color 0.3s ease;
 }
 
 .auth-link a:hover {
-  color: #2b824c;
+  color: #e70800;
   text-decoration: underline;
 }
 
@@ -166,4 +166,9 @@
     font-size: 12px;
     margin-top: 15px;
   }
+}
+
+.head-logo {
+  margin-bottom: -60px;
+  margin-top: -65px;
 }

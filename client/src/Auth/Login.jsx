@@ -71,6 +71,9 @@ const Login = () => {
 
   return (
     <div className="body">
+      <div className="head-logo">
+        <img src="/logo.png" alt="logo" width={"500px"}/>
+      </div>
       <div className="auth-container">
         <h2 className="auth-title">Login</h2>
         <form onSubmit={handleSubmit} className="auth-form">

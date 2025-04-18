@@ -202,6 +202,7 @@
   width: 100%;
   height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: url(/homeBg.jpg) no-repeat center center;
@@ -362,6 +363,7 @@ footer a {
   font-weight: 500;
   transition: all 0.3s ease;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  margin-right: 20px;
 }
 
 .users-btn:hover {
@@ -435,4 +437,12 @@ footer a {
 
 .logoutBtn {
   background-color: #F8312F
+}
+
+.logo {
+  width: 150px;
+  height: auto; 
+  display: block; 
+  margin: 0 auto; 
+  margin-left: -5px;
 }

@@ -329,7 +329,7 @@ export default function TextEditor() {
     navigator.clipboard.writeText(shareLink)
       .then(() => toast.success('Share link copied to clipboard!'))
       .catch(err => {
-        console.error('Failed to copy:', err)
+        // console.error('Failed to copy:', err)
         toast.error('Failed to copy link. Please try again.')
       })
   }
@@ -350,6 +350,9 @@ export default function TextEditor() {
       <div className="editor-container">
 
         <div className="editor-header">
+          <div className="docLogo">
+            <img src="/logo.png" alt="logo" className='logo' />
+          </div>
           <div className="documentTitle">
             <h2>{documentTitle || 'Untitled Document'}</h2>
           </div>
