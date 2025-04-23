@@ -19,15 +19,17 @@ const Register = () => {
     const newErrors = {}
 
     if (!formData.username.trim()) {
-      // newErrors.username = 'Username is required'
-      toast.error('Username is required')
+      newErrors.username = 'Username is required'
+      toast.error(newErrors.username)
     }
 
+    // Email Validation
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
     if (!formData.email.trim()) {
       // newErrors.email = 'Email is required'
       toast.error('Email is required')
-    } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
-      // newErrors.email = 'Email is invalid'
+    } else if (!emailRegex.test(formData.email)) {
+      // newErrors.email = 'Please enter a valid email address'
       toast.error('Please enter a valid email address')
     }
 
@@ -100,14 +102,14 @@ const Register = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Email</label>
+            <label className="form-label">Email Id</label>
             <input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
               className="form-input"
-              placeholder="Enter your email"
+              placeholder="Enter your Email Id"
             />
             {errors.email && <p className="error-message">{errors.email}</p>}
           </div>
