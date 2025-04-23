@@ -89,7 +89,7 @@ body {
 .container .ql-editor {
     width: 8.5in;
     min-height: 11in;
-    padding: 1in;
+    padding: 0.8in;
     margin: 1rem;
     background-color: white;
     background: rgba( 255, 255, 255, 0.25 );
@@ -97,6 +97,7 @@ body {
     backdrop-filter: blur( 4px );
     border-radius: 10px;
     border: 1px solid rgba(255, 255, 255, 0.142);
+    scrollbar-width: none;
 }
 
 .container .ql-container.ql-snow {
@@ -122,13 +123,13 @@ body {
 
 @media print {
     body {
-        background-color: none;
+        background-color: white;
     }
 
     .container .ql-editor {
         width: 6.5in;
         height: 9in;
-        padding: 0;
+        padding: 2rem;
         margin: 0;
         box-shadow: none;
         align-self: flex-start;
@@ -136,6 +137,19 @@ body {
 
     .container .ql-toolbar.ql-snow {
         display: none;
+    }
+
+    .editor-container .editor-header {
+      display: none;
+    }
+
+    .editor-buttons, 
+    .share-btn,      
+    .save-btn,       
+    .upload-btn,     
+    .close-btn,      
+    .editor-header { 
+        display: none !important; 
     }
 }
 

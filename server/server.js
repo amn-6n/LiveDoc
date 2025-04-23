@@ -9,7 +9,7 @@ import cors from 'cors'
 const app = express()
 const httpServer = createServer(app) 
 
-await mongoose.connect('mongodb://127.0.0.1/live-doc')
+await mongoose.connect('mongodb://127.0.0.1/LiveDoc')
 
 app.use(express.json())
 app.use(cors())

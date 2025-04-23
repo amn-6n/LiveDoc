@@ -392,7 +392,7 @@ export default function TextEditor() {
                 <button className="dropdown-item save-btn" onClick={handleSave}>Save</button>
                 <button className="dropdown-item quit-btn" onClick={() => {
                   socket.emit('leave-document')
-                  navigate('/')
+                  navigate('/join')
                 }}>Quit</button>
                 <button 
                   className="dropdown-item open-file-btn" 
