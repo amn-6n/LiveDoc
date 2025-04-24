@@ -19,8 +19,8 @@ const Register = () => {
     const newErrors = {}
 
     if (!formData.username.trim()) {
-      newErrors.username = 'Username is required'
-      toast.error(newErrors.username)
+      // newErrors.username = 'Username is required'
+      toast.error('Username is required')
     }
 
     // Email Validation
